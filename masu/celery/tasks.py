@@ -16,96 +16,22 @@
 #
 """Celery task definitions."""
 
-# pylint: disable=unused-argument, fixme, unused-import
-# FIXME: temporary module-wide disable until tasks are fully implemented.
-
+import datetime
+import logging
 from unittest import mock
 
+from celery.task import periodic_task
 from celery.utils.log import get_task_logger
 
-from masu import create_app
-from masu.celery import create_celery
-from masu.processor.exceptions import MasuProcessingError, MasuProviderError
+from masu.processor.tasks.download import get_report_files
+from masu.processor.tasks.process import process_report_file
+from masu.processor.orchestrator import Orchestrator
 
-MASU = create_app()
-MASU.app_context().push()
-CELERY = create_celery(MASU)
 LOG = get_task_logger(__name__)
 
 
-@CELERY.task(autoretry_for=(MasuProviderError,),
-             retry_backoff=True)
-def check_update(**kwargs):
-    """
-    Task that checks SNS and/or S3 for updated CUR files.
-
-    A chained Celery task is spawned to download the updated files.
-
-    Args:
-        customer (Customer): The customer object from the database.
-
-    Returns:
-        results (Boolean): Task success/failure
-
-    Raises:
-        MasuProviderError: An error occurred accessing the cloud provider.
-
-    """
-    # TODO: 1. look for new data.
-    # TODO: 2. when Step 1 is True, add a cache_from_s3() task to the queue.
-    return True
-
-
-@CELERY.task(autoretry_for=(MasuProviderError,),
-             retry_backoff=True)
-def cache_from_s3(**kwargs):
-    """
-    Task that downloads CUR from S3.
-
-    The downloaded files are stored in a specified directory for processing.
-    A chained Celery task is spawned to process the downloaded files.
-
-    Args:
-        customer (Customer): The customer object from the database.
-        tmpdir (String): The location to store files downloaded from S3
-
-    Returns:
-        results (Boolean): Task success/failure
-
-    Raises:
-        MasuProviderError: An error occurred accessing the cloud provider.
-
-    """
-    # TODO: 1. download new content (compare E-Tags)
-    # TODO: 2. when download completes, add a process_cost_usage_report() task
-    # TODO:    to the queue.
-    return True
-
-
-@CELERY.task(autoretry_for=(MasuProcessingError,),
-             retry_backoff=True)
-def process_cost_usage_report(**kwargs):
-    """
-    Task that processes CUR files, inserting data into the Koku DB.
-
-    Args:
-        customer (Customer): The customer object from the database.
-        tmpdir (String): The location to store files downloaded from S3
-
-    Returns:
-        results (Boolean): Task success/failure
-
-    Raises:
-        MasuProcessingError: An error occurred accessing the cloud provider.
-
-    """
-    # TODO: 1. Unzip and process each .csv.gz file in processing directory.
-    # TODO: 2. Insert any new data found in Step 1, skipping existing data.
-    return True
-
-
-@CELERY.task(track_started=True)
-def test(args):
-    """Test task. Used only in testing."""
-    LOG.debug(args)
-    return mock.Mock(name=__name__, args=args)
+# TODO: Get periodic test to work
+@periodic_task(run_every=datetime.timedelta(hours=1))
+def check_for_report_updates():
+    orchestrator = Orchestrator()
+    orchestrator.prepare_curs()

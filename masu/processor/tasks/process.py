@@ -18,12 +18,15 @@
 
 import logging
 
+from celery import shared_task
+from celery.utils.log import get_task_logger
+
 from masu.database.report_stats_db_accessor import ReportStatsDBAccessor
 from masu.processor.report_processor import ReportProcessor
 
-LOG = logging.getLogger(__name__)
+LOG = get_task_logger(__name__)
 
-
+@shared_task(name='processor.tasks.process')
 def process_report_file(process_request):
     """
     Task to process a Cost Usage Report.
@@ -39,18 +42,18 @@ def process_report_file(process_request):
             ' schema_name: {},'
             ' report_path: {},'
             ' compression: {}')
-    log_statement = stmt.format(process_request.schema_name,
-                                process_request.report_path,
-                                process_request.compression)
+    log_statement = stmt.format(process_request['schema_name'],
+                                process_request['report_path'],
+                                process_request['compression'])
     LOG.info(log_statement)
 
-    file_name = process_request.report_path.split('/')[-1]
+    file_name = process_request['report_path'].split('/')[-1]
     stats_recorder = ReportStatsDBAccessor(file_name)
     cursor_position = stats_recorder.get_cursor_position()
 
-    processor = ReportProcessor(schema_name=process_request.schema_name,
-                                report_path=process_request.report_path,
-                                compression=process_request.compression,
+    processor = ReportProcessor(schema_name=process_request['schema_name'],
+                                report_path=process_request['report_path'],
+                                compression=process_request['compression'],
                                 cursor_pos=cursor_position)
 
     stats_recorder.log_last_started_datetime()

@@ -18,15 +18,22 @@
 
 import logging
 
-from masu.external.report_downloader import ReportDownloader, ReportDownloaderError
+from celery import shared_task
+from celery.utils.log import get_task_logger
 
-LOG = logging.getLogger(__name__)
+from masu.external.report_downloader import ReportDownloader
+from masu.processor.cur_process_request import CURProcessRequest
+from masu.processor.tasks.process import process_report_file
+
+LOG = get_task_logger(__name__)
 
 
+@shared_task(name='processor.tasks.download', queue_name='download')
 def get_report_files(customer_name,
                      access_credential,
                      report_source,
                      provider_type,
+                     schema_name,
                      report_name=None):
     """
     Task to download a Cost Usage Report.
@@ -35,12 +42,7 @@ def get_report_files(customer_name,
     what report we should downlad.
 
     Args:
-        customer_name     (String): Name of the customer owning the cost usage report.
-        access_credential (String): Credential needed to access cost usage report
-                                    in the backend provider.
-        report_source     (String): Location of the cost usage report in the backend provider.
-        provider_type     (String): Koku defined provider type string.  Example: Amazon = 'AWS'
-        report_name       (String): Name of the cost usage report to download.
+        None
 
     Returns:
         files (List) List of filenames with full local path.
@@ -56,15 +58,20 @@ def get_report_files(customer_name,
     log_statement = stmt.format(access_credential, report_source, customer_name, provider_type)
     LOG.info(log_statement)
 
-    try:
-        downloader = ReportDownloader(customer_name=customer_name,
-                                      access_credential=access_credential,
-                                      report_source=report_source,
-                                      provider_type=provider_type,
-                                      report_name=report_name)
-    except ReportDownloaderError as err:
-        LOG.error(str(err))
-        return []
+    downloader = ReportDownloader(customer_name=customer_name,
+                                  access_credential=access_credential,
+                                  report_source=report_source,
+                                  provider_type=provider_type,
+                                  report_name=report_name)
 
     reports = downloader.get_current_report()
-    return reports
+
+    for report_dict in reports:
+        cur_request = {}
+        cur_request['schema_name'] = schema_name
+        cur_request['report_path'] = report_dict.get('file')
+        cur_request['compression'] = report_dict.get('compression')
+
+        process_report_file.delay(cur_request)
+
+    # return reports
