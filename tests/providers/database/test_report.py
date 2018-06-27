@@ -24,11 +24,11 @@ import random
 import psycopg2
 from sqlalchemy.orm.query import Query
 
-from masu.database import AWS_CUR_TABLE_MAP
-from masu.database.report import ReportDB, ReportSchema
-from masu.database.reporting_common import ReportingCommonDB
+from masu.providers.database import AWS_CUR_TABLE_MAP
+from masu.providers.database.report import ReportDB, ReportSchema
+from masu.providers.database.reporting_common import ReportingCommonDB
 from tests import MasuTestCase
-from tests.database.helpers import ReportObjectCreator
+from tests.providers.database.helpers import ReportObjectCreator
 
 
 class ReportSchemaTest(MasuTestCase):

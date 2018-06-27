@@ -28,32 +28,11 @@ import boto3
 from faker import Faker
 from moto import mock_sts
 
-import masu.external.downloader.aws.aws_utils as aws_utils
+from masu.providers.aws.utils import (get_assume_role_session,
+                                      month_date_range)
 
 class TestAWSUtils(TestCase):
     fake = Faker()
-
-    @mock_sts
-    def test_get_assume_role_session(self):
-        account = ''.join(random.choices(string.digits, k=12))
-        arn = 'arn:aws:iam::{}:{}/{}'.format(account,
-                                             self.fake.word(),
-                                             self.fake.word())
-
-        session = aws_utils.get_assume_role_session(arn)
-        self.assertIsInstance(session, boto3.Session)
-
-    def test_month_date_range(self):
-        today = datetime.now()
-        out = aws_utils.month_date_range(today)
-
-        start_month = today.replace(day=1, second=1, microsecond=1)
-        end_month = start_month + relativedelta(months=+1)
-        timeformat = '%Y%m%d'
-        expected_string = '{}-{}'.format(start_month.strftime(timeformat),
-                                         end_month.strftime(timeformat))
-
-        self.assertEqual(out, expected_string)
 
     report_defs = [{'ReportName': 'stuff',
                     'TimeUnit': 'DAILY',
@@ -63,17 +42,24 @@ class TestAWSUtils(TestCase):
                     'S3Prefix': 'real',
                     'S3Region': 'sa-east-1'}]
 
-
     @mock_sts
-    @patch('masu.external.downloader.aws.aws_utils.get_cur_report_definitions',
-           return_value=report_defs)
-    def test_cur_report_names_in_bucket_malformed(self, fake_report_defs):
+    def test_get_assume_role_session(self):
         account = ''.join(random.choices(string.digits, k=12))
         arn = 'arn:aws:iam::{}:{}/{}'.format(account,
                                              self.fake.word(),
                                              self.fake.word())
 
-        session = aws_utils.get_assume_role_session(arn)
+        session = get_assume_role_session(arn)
+        self.assertIsInstance(session, boto3.Session)
 
-        report_names = aws_utils.get_cur_report_names_in_bucket(account, 'notcity', session)
-        self.assertEqual(len(report_names), 0)
+    def test_month_date_range(self):
+        today = datetime.now()
+        out = month_date_range(today)
+
+        start_month = today.replace(day=1, second=1, microsecond=1)
+        end_month = start_month + relativedelta(months=+1)
+        timeformat = '%Y%m%d'
+        expected_string = '{}-{}'.format(start_month.strftime(timeformat),
+                                         end_month.strftime(timeformat))
+
+        self.assertEqual(out, expected_string)

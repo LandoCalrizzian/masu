@@ -17,6 +17,7 @@
 """Standardized namespacing entry-point for DB accessors."""
 
 # pylint: disable=unused-import
+# flake8: noqa
 from .auth import AuthDB
 from .customer import CustomerDB
 from .koku import KokuDB

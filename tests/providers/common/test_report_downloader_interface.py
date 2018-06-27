@@ -22,10 +22,18 @@ from unittest.mock import patch
 from faker import Faker
 from pyfakefs.fake_filesystem_unittest import TestCaseMixin
 
-from masu.external.downloader.report_downloader_base import ReportDownloaderBase
+from masu.providers.common.downloader import ReportDownloaderInterface
 from tests import MasuTestCase
 
-class ReportDownloaderBaseTest(MasuTestCase, TestCaseMixin):
+class FakeDownloader(ReportDownloaderInterface):
+    def download_current_report(self, dt):
+        return []
+
+    def download_report(self):
+        return []
+
+
+class ReportDownloaderInterfaceTest(MasuTestCase, TestCaseMixin):
     """Test Cases for ReportDownloaderBase."""
 
     fake = Faker()
@@ -35,14 +43,14 @@ class ReportDownloaderBaseTest(MasuTestCase, TestCaseMixin):
         self.setUpPyfakefs()
 
     def test_report_downloader_base_no_path(self):
-        downloader = ReportDownloaderBase()
-        self.assertIsInstance(downloader, ReportDownloaderBase)
+        downloader = FakeDownloader()
+        self.assertIsInstance(downloader, ReportDownloaderInterface)
         self.assertIsNotNone(downloader.download_path)
         self.assertTrue(os.path.exists(downloader.download_path))
 
-    def test_report_downloader_base(self):
+    def test_report_downloader_interface(self):
         dl_path = '/{}/{}/{}'.format(self.fake.word().lower(),
                                      self.fake.word().lower(),
                                      self.fake.word().lower())
-        downloader = ReportDownloaderBase(download_path=dl_path)
+        downloader = FakeDownloader(download_path=dl_path)
         self.assertEqual(downloader.download_path, dl_path)

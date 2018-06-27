@@ -27,6 +27,10 @@ class Account():
     # TODO: in the future, we will abstract this a bit, so that we can support
     # multiple types of accounts, and build-out provider-specific report
     # downloading flows.
+    def __init__(self):
+        """Construct an Account."""
+        self.providers = ProviderDB().all()
+
     def all(self):
         """
         Retrieve all accounts from the database managed by Koku.
@@ -41,7 +45,7 @@ class Account():
 
         """
         accounts = []
-        for provider in ProviderDB().all():
+        for provider in self.providers:
             provider_accessor = ProviderDB(provider.uuid)
             auth_credential = provider_accessor.get_authentication()
             billing_source = provider_accessor.get_billing_source()

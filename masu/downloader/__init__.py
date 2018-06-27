@@ -17,7 +17,7 @@
 """Provider external interface for koku to consume."""
 
 from masu.config import Config
-from masu.exceptions import MasuProcessingError, MasuProviderError
+from masu.exceptions import MasuProviderError
 from masu.providers.aws.downloader import AWSReportDownloader
 
 
@@ -34,13 +34,13 @@ class ReportDownloader:
         """Set the downloader based on the backend cloud provider."""
         self.customer_name = customer_name
         self.credential = access_credential
-        self.cur_source = report_source
+        self.report_source = report_source
         self.report_name = report_name
         self.provider_type = provider_type
         try:
             self._downloader = self._set_downloader()
         except Exception as err:
-            raise MasuProcessingError(str(err))
+            raise MasuProviderError(str(err))
 
         if not self._downloader:
             raise MasuProviderError('Invalid provider type specified.')
@@ -61,7 +61,7 @@ class ReportDownloader:
         if self.provider_type == Config.AMAZON_WEB_SERVICES:
             return AWSReportDownloader(customer_name=self.customer_name,
                                        auth_credential=self.credential,
-                                       cur_source=self.cur_source,
+                                       bucket=self.report_source,
                                        report_name=self.report_name)
 
         return None

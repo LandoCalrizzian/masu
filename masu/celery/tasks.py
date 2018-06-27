@@ -25,7 +25,7 @@ from celery.utils.log import get_task_logger
 
 from masu import create_app
 from masu.celery import create_celery
-from masu.processor.exceptions import MasuProcessingError, MasuProviderError
+from masu.exceptions import MasuProcessingError, MasuProviderError
 
 MASU = create_app()
 MASU.app_context().push()

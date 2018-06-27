@@ -28,8 +28,6 @@ from masu.exceptions import MasuProviderError
 from masu.providers.common.downloader import ReportDownloaderInterface
 from masu.providers.database.accessors import ReportStatsDB
 from .utils import (get_assume_role_session,
-                    get_report_definitions,
-                    get_reports,
                     month_date_range)
 
 DATA_DIR = Config.TMP_DIR
@@ -44,15 +42,15 @@ class AWSReportDownloader(ReportDownloaderInterface):
     https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/billing-reports-costusage.html
     """
 
-    def __init__(self, customer_name, auth_credential, cur_source, report_name=None, **kwargs):
+    def __init__(self, customer_name, auth_credential, bucket, report_name=None, **kwargs):
         """
         Constructor.
 
         Args:
             customer_name    (String) Name of the customer
             auth_credential  (String) Authentication credential for S3 bucket (RoleARN)
-            report_name      (String) Name of the Cost Usage Report to download (optional)
-            cur_source       (String) Name of the S3 bucket containing the CUR
+            bucket           (String) Name of the S3 bucket containing the report
+            report_name      (String) Name of the report to download (optional)
 
         """
         super().__init__(**kwargs)
@@ -63,22 +61,27 @@ class AWSReportDownloader(ReportDownloaderInterface):
         session = get_assume_role_session(auth_credential, 'MasuDownloaderSession')
         self.cur = session.client('cur')
 
+        # fetch details about the report from the cloud provider
+        defs = self.cur.describe_report_definitions()
         if not report_name:
-            available_reports = get_reports(auth_credential, cur_source)
-            # Get the first report in the bucket until Koku can specify which CUR the user wants
-            if available_reports:
-                report_name = available_reports[0]
+            report_names = []
+            for report in defs.get('ReportDefinitions', []):
+                if bucket == report.get('S3Bucket'):
+                    report_names.append(report['ReportName'])
+
+            # FIXME: Get the first report in the bucket until Koku can specify which CUR the user wants
+            if report_names:
+                report_name = report_names[0]
         self.report_name = report_name
 
-        report_defs = get_report_definitions(auth_credential, session)
+        report_defs = defs.get('ReportDefinitions', [])
         report = [rep for rep in report_defs
                   if rep['ReportName'] == self.report_name]
 
         if not report:
             raise MasuProviderError('Cost and Usage Report definition not found.')
 
-        self.report = report.pop() if report else None
-        self.bucket = cur_source
+        self.report = report.pop()
 
         self.s3_client = session.client('s3')
 
@@ -130,7 +133,7 @@ class AWSReportDownloader(ReportDownloaderInterface):
 
         """
         s3_resource = boto3.resource('s3')
-        bucket = s3_resource.Bucket(self.bucket)
+        bucket = s3_resource.Bucket(self.report.get('S3Bucket'))
         files = []
         for s3obj in bucket.objects.all():
             file_name, _ = self.download_file(s3obj.key)
@@ -164,11 +167,11 @@ class AWSReportDownloader(ReportDownloaderInterface):
         # Make sure the data directory exists
         os.makedirs(file_path, exist_ok=True)
 
-        s3_file = self.s3_client.get_object(Bucket=self.bucket, Key=key)
+        s3_file = self.s3_client.get_object(Bucket=self.report.get('S3Bucket'), Key=key)
         s3_etag = s3_file.get('ETag')
         if s3_etag != stored_etag:
             LOG.info('Downloading %s to %s', s3_filename, file_name)
-            self.s3_client.download_file(self.bucket, key, file_name)
+            self.s3_client.download_file(self.report.get('S3Bucket'), key, file_name)
         return file_name, s3_etag
 
     def download_report(self, date_time):

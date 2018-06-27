@@ -19,7 +19,7 @@
 
 from datetime import datetime
 
-from masu.database.report_stats import ReportStatsDB
+from masu.providers.database.report_stats import ReportStatsDB
 from tests import MasuTestCase
 
 class ReportStatsDBTest(MasuTestCase):

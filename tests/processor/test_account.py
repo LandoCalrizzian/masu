@@ -17,24 +17,25 @@
 
 """Test the CURAccountsDB utility object."""
 
-from masu.external import AMAZON_WEB_SERVICES
-from masu.external.accounts.db.cur_accounts_db import CURAccountsDB
+from masu.processor.account import Account
+
 from tests import MasuTestCase
 
+class AccountTest(MasuTestCase):
+    """Test Cases for the AccountsAccessor object."""
 
-class CURAccountsDBTest(MasuTestCase):
-    """Test Cases for the CURAccountsDB object."""
+    def test_get_accounts(self):
+        """Test to get_access_credential"""
+        account_objects = Account().all()
 
-    def test_get_accounts_from_source(self):
-        """Test to get all accounts"""
-        accounts = CURAccountsDB().get_accounts_from_source()
-        if len(accounts) != 1:
+        if len(account_objects) != 1:
             self.fail('unexpected number of accounts')
 
-        account = accounts.pop()
+        self.assertIsInstance(account_objects.pop(), dict)
 
-        self.assertEqual(account.get_access_credential(), 'arn:aws:iam::111111111111:role/CostManagement')
-        self.assertEqual(account.get_billing_source(), 'test-bucket')
-        self.assertEqual(account.get_customer(), 'Test Customer')
-        self.assertEqual(account.get_provider_type(), AMAZON_WEB_SERVICES)
-
+        for account in account_objects:
+            self.assertEqual(account.get('access_credential'), 'arn:aws:iam::111111111111:role/CostManagement')
+            self.assertEqual(account.get('billing_source'), 'test-bucket')
+            self.assertEqual(account.get('customer'), 'Test Customer')
+            self.assertEqual(account.get('provider_type'), 'Test Provider')
+            self.assertEqual(account.get('schema_name'), 'testcustomer')

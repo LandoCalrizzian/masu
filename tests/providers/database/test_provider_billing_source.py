@@ -15,24 +15,30 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""Test the AuthDBAccessor utility object."""
+"""Test the ProviderBillingSourceDB utility object."""
 
-from masu.database.auth import AuthDB
+from masu.providers.database.provider_billing_source import ProviderBillingSourceDB
 from tests import MasuTestCase
 
 
-class AuthDBTest(MasuTestCase):
-    """Test Cases for the AuthDBAccessor object."""
+class ProviderBillingSourceDBTest(MasuTestCase):
+    """Test Cases for the ProviderBillingSourceDB object."""
 
     def test_initializer(self):
         """Test Initializer"""
-        auth_id = '1'
-        accessor = AuthDB(auth_id)
+        billing_source_id = '1'
+        accessor = ProviderBillingSourceDB(billing_source_id)
         self.assertIsNotNone(accessor._session)
         self.assertTrue(accessor.does_db_entry_exist())
 
-    def test_get_name(self):
-        """Test name getter."""
+    def test_get_uuid(self):
+        """Test uuid getter."""
         auth_id = '1'
-        accessor = AuthDB(auth_id)
-        self.assertEqual('Test Customer', accessor.get_name())
+        accessor = ProviderBillingSourceDB(auth_id)
+        self.assertEqual('75b17096-319a-45ec-92c1-18dbd5e78f94', accessor.get_uuid())
+
+    def test_get_provider_resource_name(self):
+        """Test provider name getter."""
+        auth_id = '1'
+        accessor = ProviderBillingSourceDB(auth_id)
+        self.assertEqual('test-bucket', accessor.get_bucket())

@@ -15,29 +15,36 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""Test the ProviderDBAuthAccessor utility object."""
+"""Test the CustomerDBAccessor utility object."""
 
-from masu.database.provider_auth import ProviderAuthDB
+from masu.providers.database.customer import CustomerDB
 from tests import MasuTestCase
 
-class ProviderAuthDBTest(MasuTestCase):
-    """Test Cases for the ProviderDBAuthAccessor object."""
+
+class CustomerDBAccessorTest(MasuTestCase):
+    """Test Cases for the CustomerDB object."""
 
     def test_initializer(self):
         """Test Initializer"""
-        auth_id = '1'
-        accessor = ProviderAuthDB(auth_id)
+        customer_id = '1'
+        accessor = CustomerDB(customer_id)
         self.assertIsNotNone(accessor._session)
         self.assertTrue(accessor.does_db_entry_exist())
 
     def test_get_uuid(self):
         """Test uuid getter."""
-        auth_id = '1'
-        accessor = ProviderAuthDB(auth_id)
-        self.assertEqual('7e4ec31b-7ced-4a17-9f7e-f77e9efa8fd6', accessor.get_uuid())
+        customer_id = '1'
+        accessor = CustomerDB(customer_id)
+        self.assertIsNotNone(accessor.get_uuid())
 
-    def test_get_get_provider_resource_name(self):
+    def test_get_schema_name(self):
         """Test provider name getter."""
-        auth_id = '1'
-        accessor = ProviderAuthDB(auth_id)
-        self.assertEqual('arn:aws:iam::111111111111:role/CostManagement', accessor.get_provider_resource_name())
+        customer_id = '1'
+        accessor = CustomerDB(customer_id)
+        self.assertEqual('testcustomer', accessor.get_schema_name())
+
+    def test_get_group_ptr_id(self):
+        """Test provider name getter."""
+        customer_id = '1'
+        accessor = CustomerDB(customer_id)
+        self.assertEqual(1, accessor.get_group_ptr_id())

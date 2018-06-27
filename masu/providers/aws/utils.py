@@ -16,8 +16,12 @@
 #
 """AWS utility functions."""
 
+import re
+
 import boto3
 from dateutil.relativedelta import relativedelta
+
+from masu.exceptions import MasuProviderError
 
 
 def get_assume_role_session(arn, session='MasuSession'):
@@ -36,7 +40,8 @@ def get_assume_role_session(arn, session='MasuSession'):
     See: https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html
     """
     client = boto3.client('sts')
-    response = client.assume_role(RoleArn=arn, RoleSessionName=session)
+    parsed_arn = AwsArn(arn)   # validate the ARN
+    response = client.assume_role(RoleArn=str(parsed_arn), RoleSessionName=session)
     return boto3.Session(
         aws_access_key_id=response['Credentials']['AccessKeyId'],
         aws_secret_access_key=response['Credentials']['SecretAccessKey'],
@@ -65,39 +70,60 @@ def month_date_range(for_date_time):
                           end_month.strftime(timeformat))
 
 
-def get_report_definitions(role_arn, session=None):
+class AwsArn(object):
     """
-    Get Cost Usage Reports associated with a given RoleARN.
+    Object representing an AWS ARN.
 
-    Args:
-        role_arn     (String) RoleARN for AWS session
+    See also:
+        https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html
 
-    Returns:
-        ([String]): List of Cost Usage Report Definitions
+    General ARN formats:
+        arn:partition:service:region:account-id:resource
+        arn:partition:service:region:account-id:resourcetype/resource
+        arn:partition:service:region:account-id:resourcetype:resource
 
-    """
-    if not session:
-        session = get_assume_role_session(role_arn)
-    cur_client = session.client('cur')
-    defs = cur_client.describe_report_definitions()
-    report_defs = defs.get('ReportDefinitions', [])
-    return report_defs
-
-
-def get_reports(role_arn, s3_bucket, session=None):
-    """
-    Get Cost Usage Reports associated with a given RoleARN.
-
-    Args:
-        role_arn     (String) RoleARN for AWS session
-
-    Returns:
-        ([String]): List of Cost Usage Report Names
+    Example ARNs:
+        <!-- Elastic Beanstalk application version -->
+        arn:aws:elasticbeanstalk:us-east-1:123456789012:environment/My App/foo
+        <!-- IAM user name -->
+        arn:aws:iam::123456789012:user/David
+        <!-- Amazon RDS instance used for tagging -->
+        arn:aws:rds:eu-west-1:123456789012:db:mysql-db
+        <!-- Object in an Amazon S3 bucket -->
+        arn:aws:s3:::my_corporate_bucket/exampleobject.png
 
     """
-    report_defs = get_report_definitions(role_arn, session)
-    report_names = []
-    for report in report_defs:
-        if s3_bucket == report['S3Bucket']:
-            report_names.append(report['ReportName'])
-    return report_names
+
+    arn_regex = re.compile(r'^arn:(?P<partition>\w+):(?P<service>\w+):'
+                           r'(?P<region>\w+(?:-\w+)+)?:'
+                           r'(?P<account_id>\d{12})?:(?P<resource_type>[^:/]+)'
+                           r'(?P<resource_separator>[:/])?(?P<resource>.*)')
+
+    partition = None
+    service = None
+    region = None
+    account_id = None
+    resource_type = None
+    resource_separator = None
+    resource = None
+
+    def __init__(self, arn):
+        """
+        Parse ARN string into its component pieces.
+
+        Args:
+            arn (str): Amazon Resource Name
+
+        """
+        self.arn = arn
+        match = self.arn_regex.match(arn)
+
+        if not match:
+            raise MasuProviderError('Invalid ARN: {0}'.format(arn))
+
+        for key, val in match.groupdict().items():
+            setattr(self, key, val)
+
+    def __repr__(self):
+        """Return the ARN itself."""
+        return self.arn

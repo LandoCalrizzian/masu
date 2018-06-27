@@ -28,11 +28,10 @@ import random
 from sqlalchemy.sql.expression import delete
 
 from masu.config import Config
-from masu.database import AWS_CUR_TABLE_MAP
-from masu.database.report import ReportDB
-from masu.database.reporting_common import ReportingCommonDB
-from masu.external import GZIP_COMPRESSED, UNCOMPRESSED
-from masu.processor.exceptions import MasuProcessingError
+from masu.providers.database import AWS_CUR_TABLE_MAP
+from masu.providers.database.report import ReportDB
+from masu.providers.database.reporting_common import ReportingCommonDB
+from masu.exceptions import MasuProcessingError
 from masu.processor.report_processor import ProcessedReport, ReportProcessor
 from tests import MasuTestCase
 
@@ -72,7 +71,7 @@ class ReportProcessorTest(MasuTestCase):
         cls.processor = ReportProcessor(
             schema_name='testcustomer',
             report_path=cls.test_report,
-            compression=UNCOMPRESSED
+            compression=Config.UNCOMPRESSED
         )
 
         cls.accessor = cls.processor.report_db
@@ -127,7 +126,7 @@ class ReportProcessorTest(MasuTestCase):
         processor = ReportProcessor(
             schema_name='testcustomer',
             report_path=self.test_report,
-            compression=UNCOMPRESSED
+            compression=Config.UNCOMPRESSED
         )
         report_db = processor.report_db
         report_schema = report_db.report_schema
@@ -165,7 +164,7 @@ class ReportProcessorTest(MasuTestCase):
         processor = ReportProcessor(
             schema_name='testcustomer',
             report_path=self.test_report_gzip,
-            compression=GZIP_COMPRESSED
+            compression=Config.GZIP_COMPRESSED
         )
         report_db = processor.report_db
         report_schema = report_db.report_schema
@@ -204,7 +203,7 @@ class ReportProcessorTest(MasuTestCase):
         processor = ReportProcessor(
             schema_name='testcustomer',
             report_path=self.test_report,
-            compression=UNCOMPRESSED,
+            compression=Config.UNCOMPRESSED,
             cursor_pos=cursor_pos
         )
 
@@ -223,14 +222,14 @@ class ReportProcessorTest(MasuTestCase):
 
     def test_get_file_opener_default(self):
         """Test that the default file opener is returned."""
-        opener, mode = self.processor._get_file_opener(UNCOMPRESSED)
+        opener, mode = self.processor._get_file_opener(Config.UNCOMPRESSED)
 
         self.assertEqual(opener, open)
         self.assertEqual(mode, 'r')
 
     def test_get_file_opener_gzip(self):
         """Test that the gzip file opener is returned."""
-        opener, mode = self.processor._get_file_opener(GZIP_COMPRESSED)
+        opener, mode = self.processor._get_file_opener(Config.GZIP_COMPRESSED)
 
         self.assertEqual(opener, gzip.open)
         self.assertEqual(mode, 'rt')

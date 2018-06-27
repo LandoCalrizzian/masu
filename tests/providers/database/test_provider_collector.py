@@ -15,26 +15,26 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""Test the download endpoint view."""
+"""Test the ProviderDB utility object."""
 
-from unittest.mock import patch
-
+from masu.providers.database.provider import ProviderDB
 from tests import MasuTestCase
 
 
-class DownloadAPIViewTest(MasuTestCase):
-    """Test Cases for the Download API."""
+class ProviderQueryTest(MasuTestCase):
+    """Test Cases for the ProviderDB object."""
 
-    file_list = ['/var/tmp/masu/region/aws/catch-clearly.csv',
-                 '/var/tmp/masu/base/aws/professor-hour-industry-television.csv']
+    def test_initializer(self):
+        """Test Initializer"""
+        collector = ProviderDB()
+        self.assertIsNotNone(collector._session)
 
-    @patch('masu.processor.orchestrator.Orchestrator.prepare', return_value=file_list)
-    def test_download(self, file_list):
-        """Test the download endpoint."""
-        response = self.client.get('/api/v1/download/')
-        body = response.json
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers['Content-Type'], 'application/json')
-
-        self.assertIn('files', body)
+    def test_get_uuids(self):
+        """Test getting all uuids."""
+        collector = ProviderDB()
+        providers = collector.all()
+        test_provider_found = False
+        for provider in providers:
+            if '6e212746-484a-40cd-bba0-09a19d132d64' in provider.uuid:
+                test_provider_found = True
+        self.assertTrue(test_provider_found)

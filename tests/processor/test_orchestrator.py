@@ -19,10 +19,9 @@
 
 from unittest.mock import patch
 
-from masu.external import AMAZON_WEB_SERVICES
-from masu.external.report_downloader import ReportDownloaderError
+from masu.config import Config
+from masu.exceptions import MasuProviderError
 from masu.processor.orchestrator import Orchestrator
-from masu.processor.cur_process_request import CURProcessRequest
 
 from tests import MasuTestCase
 
@@ -43,57 +42,48 @@ class OrchestratorTest(MasuTestCase):
             self.fail("Unexpected number of test accounts")
 
         account = orchestrator._accounts.pop()
-        self.assertEqual(account.get_access_credential(), 'arn:aws:iam::111111111111:role/CostManagement')
-        self.assertEqual(account.get_billing_source(), 'test-bucket')
-        self.assertEqual(account.get_customer(), 'Test Customer')
-        self.assertEqual(account.get_provider_type(), AMAZON_WEB_SERVICES)
+        self.assertEqual(account.get('authentication'), 'arn:aws:iam::111111111111:role/CostManagement')
+        self.assertEqual(account.get('billing_source'), 'test-bucket')
+        self.assertEqual(account.get('customer'), 'Test Customer')
+        self.assertEqual(account.get('provider'), Config.AMAZON_WEB_SERVICES)
 
-
-    @patch('masu.external.report_downloader.ReportDownloader._set_downloader', return_value=FakeDownloader)
-    def test_prepare_curs(self, mock_downloader):
+    @patch('masu.downloader.ReportDownloader._set_downloader', return_value=FakeDownloader)
+    def test_prepare(self, mock_downloader):
         """Test downloading cost usage reports."""
         orchestrator = Orchestrator()
-
-        reports = orchestrator.prepare_curs()
-
+        reports = orchestrator.prepare()
         self.assertEqual(len(reports), 2)
 
-    @patch('masu.external.report_downloader.ReportDownloader._set_downloader', return_value=FakeDownloader)
-    @patch('masu.external.accounts_accessor.AccountsAccessor.get_accounts', return_value=[])
-    def test_prepare_curs_no_accounts(self, mock_downloader, mock_accounts_accessor):
+    @patch('masu.downloader.ReportDownloader._set_downloader', return_value=FakeDownloader)
+    @patch('masu.processor.account.Account.all', return_value=[])
+    def test_prepare_no_accounts(self, mock_downloader, mock_accounts_accessor):
         """Test downloading cost usage reports."""
         orchestrator = Orchestrator()
-        reports = orchestrator.prepare_curs()
-
+        reports = orchestrator.prepare()
         self.assertEqual(len(reports), 0)
 
     @patch('masu.processor.tasks.process.process_report_file', return_value=None)
-    def test_process_curs(self, mock_task):
+    def test_process(self, mock_task):
         """Test downloading cost usage reports."""
-        requests = []
-        request1 = CURProcessRequest().report_path = '/test/path/file.csv'
-        requests.append(request1)
-        print((request1))
-        request2 = CURProcessRequest().report_path = '/test/path/file2.csv'
-        requests.append(request2)
-        print((request2))
-
+        requests = [{'report_path' : '/test/path/file.csv'},
+                    {'report_path' : '/test/path/file2.csv'}]
         orchestrator = Orchestrator()
         orchestrator._processing_requests = requests
-        orchestrator.process_curs()
+        orchestrator.process()
+        # FIXME: missing assertion
 
     @patch('masu.processor.tasks.process.process_report_file', return_value=None)
-    @patch('masu.external.accounts_accessor.AccountsAccessor.get_accounts', return_value=[])
-    def test_process_curs_not_accounts(self, mock_task, mock_accounts_accessor):
+    @patch('masu.processor.account.Account.all', return_value=[])
+    def test_process_not_accounts(self, mock_task, mock_accounts_accessor):
         """Test downloading cost usage reports with no pending requests."""
         orchestrator = Orchestrator()
+        orchestrator.process()
+        # FIXME: missing assertion
 
-        orchestrator.process_curs()
-
-    @patch('masu.external.report_downloader.ReportDownloader._set_downloader', side_effect=ReportDownloaderError)
-    def test_prepare_curs_download_exception(self, mock_downloader):
+    @patch('masu.downloader.ReportDownloader._set_downloader',
+           side_effect=MasuProviderError)
+    def test_prepare_download_exception(self, mock_downloader):
         """Test downloading cost usage reports."""
         orchestrator = Orchestrator()
-        reports = orchestrator.prepare_curs()
-
+        reports = orchestrator.prepare()
         self.assertEqual(len(reports), 0)

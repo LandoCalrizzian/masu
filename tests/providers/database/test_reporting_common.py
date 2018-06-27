@@ -20,8 +20,8 @@ import copy
 
 from sqlalchemy.orm.session import Session
 
-from masu.database import AWS_CUR_TABLE_MAP
-from masu.database.reporting_common import ReportingCommonDB
+from masu.providers.database import AWS_CUR_TABLE_MAP
+from masu.providers.database.reporting_common import ReportingCommonDB
 from tests import MasuTestCase
 
 
