@@ -22,7 +22,7 @@ from unittest.mock import patch
 from masu.config import Config
 from masu.exceptions import MasuProviderError
 from masu.providers.aws.downloader import AWSReportDownloader
-from masu.downloader import ReportDownloader
+from masu.processor.downloader import ReportDownloader
 from tests import MasuTestCase
 
 class FakeDownloader():
@@ -42,7 +42,7 @@ class ReportDownloaderTest(MasuTestCase):
                                       provider_type=Config.AMAZON_WEB_SERVICES)
         self.assertIsNotNone(downloader._downloader)
 
-    @patch('masu.downloader.ReportDownloader._set_downloader',
+    @patch('masu.processor.downloader.ReportDownloader._set_downloader',
            side_effect=MasuProviderError)
     def test_initializer_downloader_exception(self, fake_downloader):
         """Test to initializer where _set_downloader throws exception"""

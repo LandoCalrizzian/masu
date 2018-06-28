@@ -47,14 +47,14 @@ class OrchestratorTest(MasuTestCase):
         self.assertEqual(account.get('customer'), 'Test Customer')
         self.assertEqual(account.get('provider'), Config.AMAZON_WEB_SERVICES)
 
-    @patch('masu.downloader.ReportDownloader._set_downloader', return_value=FakeDownloader)
+    @patch('masu.processor.downloader.ReportDownloader._set_downloader', return_value=FakeDownloader)
     def test_prepare(self, mock_downloader):
         """Test downloading cost usage reports."""
         orchestrator = Orchestrator()
         reports = orchestrator.prepare()
         self.assertEqual(len(reports), 2)
 
-    @patch('masu.downloader.ReportDownloader._set_downloader', return_value=FakeDownloader)
+    @patch('masu.processor.downloader.ReportDownloader._set_downloader', return_value=FakeDownloader)
     @patch('masu.processor.account.Account.all', return_value=[])
     def test_prepare_no_accounts(self, mock_downloader, mock_accounts_accessor):
         """Test downloading cost usage reports."""
@@ -80,7 +80,7 @@ class OrchestratorTest(MasuTestCase):
         orchestrator.process()
         # FIXME: missing assertion
 
-    @patch('masu.downloader.ReportDownloader._set_downloader',
+    @patch('masu.processor.downloader.ReportDownloader._set_downloader',
            side_effect=MasuProviderError)
     def test_prepare_download_exception(self, mock_downloader):
         """Test downloading cost usage reports."""
