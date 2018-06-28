@@ -140,4 +140,3 @@ Please refer to Contributing_.
    :target: https://pyup.io/repos/github/project-koku/masu/
 .. |Python 3| image:: https://pyup.io/repos/github/project-koku/masu/python-3-shield.svg?t=1524249231720
    :target: https://pyup.io/repos/github/project-koku/masu/
-

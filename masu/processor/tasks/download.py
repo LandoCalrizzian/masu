@@ -18,8 +18,8 @@
 
 import logging
 
-from masu.processor.downloader import ReportDownloader
 from masu.exceptions import MasuProcessingError, MasuProviderError
+from masu.processor.downloader import ReportDownloader
 
 LOG = logging.getLogger(__name__)
 
