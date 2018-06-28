@@ -21,8 +21,7 @@ from masu.exceptions import MasuProviderError
 from masu.providers.aws.downloader import AWSReportDownloader
 
 
-# pylint: disable=too-few-public-methods
-# pylint: disable=too-many-arguments
+# pylint: disable=too-few-public-methods, too-many-arguments, fixme
 class ReportDownloader:
     """Top-level interface for masu to use for downloading reports."""
 
