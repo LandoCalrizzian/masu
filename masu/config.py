@@ -68,6 +68,5 @@ class Config(object):
 
     AWS_DATETIME_STR_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
-    # The interval for scanning for new reports.
-    # This needs to be a timedelta object.
-    REPORT_CHECK_INTERVAL = datetime.timedelta(minutes=5)
+    # The interval to scan for new reports.
+    REPORT_CHECK_INTERVAL = datetime.timedelta(minutes=1)

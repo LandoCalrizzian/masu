@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-"""Downloading asynchronous tasks."""
+"""Asynchronous tasks."""
 
 # pylint: disable=too-many-arguments, too-many-function-args
 # disabled module-wide due to current state of task signature.
@@ -23,14 +23,16 @@
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
+from masu.database.report_stats_db_accessor import ReportStatsDBAccessor
 from masu.exceptions import MasuProcessingError, MasuProviderError
+from masu.external.accounts_accessor import AccountsAccessor
 from masu.external.report_downloader import ReportDownloader, ReportDownloaderError
-from masu.processor.tasks.process import process_report_file
+from masu.processor.report_processor import ReportProcessor
 
 LOG = get_task_logger(__name__)
 
 
-@shared_task(name='processor.tasks.download', queue_name='download')
+@shared_task(name='masu.processor.tasks.get_report_files', queue_name='download')
 def get_report_files(customer_name,
                      access_credential,
                      report_source,
@@ -100,4 +102,64 @@ def _get_report_files(customer_name,
         LOG.error(str(err))
         return []
 
+    return reports
+
+
+@shared_task(name='masu.processor.tasks.process_report_file', queue_name='process')
+def process_report_file(schema_name, report_path, compression):
+    """Shared celery task to process report files asynchronously."""
+    _process_report_file(schema_name, report_path, compression)
+
+
+def _process_report_file(schema_name, report_path, compression):
+    """
+    Task to process a Cost Usage Report.
+
+    Args:
+        schema_name (String) db schema name
+        report_path (String) path to downloaded reports
+        compression (String) 'PLAIN' or 'GZIP'
+
+    Returns:
+        None
+
+    """
+    stmt = ('Processing Report:'
+            ' schema_name: {},'
+            ' report_path: {},'
+            ' compression: {}')
+    log_statement = stmt.format(schema_name,
+                                report_path,
+                                compression)
+    LOG.info(log_statement)
+
+    file_name = report_path.split('/')[-1]
+    stats_recorder = ReportStatsDBAccessor(file_name)
+    cursor_position = stats_recorder.get_cursor_position()
+
+    processor = ReportProcessor(schema_name=schema_name,
+                                report_path=report_path,
+                                compression=compression,
+                                cursor_pos=cursor_position)
+
+    stats_recorder.log_last_started_datetime()
+    last_cursor_position = processor.process()
+    stats_recorder.log_last_completed_datetime()
+    stats_recorder.set_cursor_position(last_cursor_position)
+    stats_recorder.commit()
+
+
+@shared_task(name='masu.processor.tasks.check_report_updates', queue_name='celery')
+def check_report_updates():
+    """Scheduled task to initiate scanning process on a regular interval."""
+    reports = []
+    for account in AccountsAccessor().get_accounts():
+        stmt = 'Download task queued for {}'.format(account.get_customer())
+        LOG.info(stmt)
+
+        reports = get_report_files.delay(customer_name=account.get_customer(),
+                                         access_credential=account.get_access_credential(),
+                                         report_source=account.get_billing_source(),
+                                         provider_type=account.get_provider_type(),
+                                         schema_name=account.get_schema_name())
     return reports

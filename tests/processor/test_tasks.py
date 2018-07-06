@@ -24,7 +24,7 @@ import faker
 from unittest.mock import patch, Mock
 
 from masu.external.report_downloader import ReportDownloaderError
-from masu.processor.tasks.download import _get_report_files
+from masu.processor.tasks import _get_report_files, _process_report_file
 
 from tests import MasuTestCase
 
@@ -48,7 +48,7 @@ class GetReportFileTests(MasuTestCase):
 
     fake = faker.Faker()
 
-    @patch('masu.processor.tasks.download.ReportDownloader._set_downloader',
+    @patch('masu.processor.tasks.ReportDownloader._set_downloader',
            return_value=FakeDownloader)
     def test_get_report(self, fake_downloader):
         """Test task"""
@@ -63,7 +63,7 @@ class GetReportFileTests(MasuTestCase):
         self.assertIsInstance(report, list)
         self.assertGreater(len(report), 0)
 
-    @patch('masu.processor.tasks.download.ReportDownloader._set_downloader',
+    @patch('masu.processor.tasks.ReportDownloader._set_downloader',
            side_effect=Exception('only a test'))
     def test_get_report_exception(self, fake_downloader):
         """Test task"""
@@ -77,3 +77,16 @@ class GetReportFileTests(MasuTestCase):
                                    report_source=self.fake.word())
 
         self.assertEqual(report, [])
+
+
+class ProcessReportFileTests(MasuTestCase):
+    """Test Cases for the Orchestrator object."""
+
+    @patch('masu.processor.report_processor.ReportProcessor')
+    @patch('masu.processor.report_processor.ReportProcessor.process', return_value=2)
+    def test_process_file(self, fake_processor, fake_process):
+        """Test task"""
+        request = {'report_path': '/test/path/file1.csv',
+                   'compression': 'gzip',
+                   'schema_name': 'testcustomer'}
+        _process_report_file(**request)

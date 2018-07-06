@@ -69,7 +69,7 @@ def create_app(test_config=None):
 
     # Celery task queue
     celery = create_celery(app)
-    celery.autodiscover_tasks()
+    celery.autodiscover_tasks(['masu.processor'])
 
     # Routes
     app.add_url_rule('/api/v1/status/', view_func=StatusView.as_view('show_status'))
