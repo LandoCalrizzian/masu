@@ -36,13 +36,14 @@ def create_celery(app):
     }
 
     # Celery Beat schedule
-    celery.conf.beat_schedule = {
-        'check-report-updates': {
-            'task': 'masu.processor.tasks.check_report_updates',
-            'schedule': app.config.get('REPORT_CHECK_INTERVAL'),
-            'args': []
+    if app.conf.get('SCHEDULE_REPORT_CHECKS'):
+        celery.conf.beat_schedule = {
+            'check-report-updates': {
+                'task': 'masu.processor.tasks.check_report_updates',
+                'schedule': app.config.get('REPORT_CHECK_INTERVAL'),
+                'args': []
+            }
         }
-    }
 
     # pylint: disable=too-few-public-methods
     class ContextTask(celery.Task):
