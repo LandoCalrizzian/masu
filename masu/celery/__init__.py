@@ -36,7 +36,7 @@ def create_celery(app):
     }
 
     # Celery Beat schedule
-    if app.conf.get('SCHEDULE_REPORT_CHECKS'):
+    if app.config.get('SCHEDULE_REPORT_CHECKS'):
         celery.conf.beat_schedule = {
             'check-report-updates': {
                 'task': 'masu.processor.tasks.check_report_updates',
