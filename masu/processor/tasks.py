@@ -23,11 +23,9 @@
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
-from masu.database.report_stats_db_accessor import ReportStatsDBAccessor
-from masu.exceptions import MasuProcessingError, MasuProviderError
 from masu.external.accounts_accessor import AccountsAccessor
-from masu.external.report_downloader import ReportDownloader, ReportDownloaderError
-from masu.processor.report_processor import ReportProcessor
+from masu.processor._tasks.download import _get_report_files
+from masu.processor._tasks.process import _process_report_file
 
 LOG = get_task_logger(__name__)
 
@@ -39,31 +37,11 @@ def get_report_files(customer_name,
                      provider_type,
                      schema_name=None,
                      report_name=None):
-    """Shared celery task to download reports asynchronously."""
-    reports = _get_report_files(customer_name,
-                                access_credential,
-                                report_source,
-                                provider_type,
-                                report_name)
-
-    # initiate chained async task
-    for report_dict in reports:
-        request = {'schema_name': schema_name,
-                   'report_path': report_dict.get('file'),
-                   'compression': report_dict.get('compression')}
-        process_report_file.delay(**request)
-
-
-def _get_report_files(customer_name,
-                      access_credential,
-                      report_source,
-                      provider_type,
-                      report_name=None):
     """
-    Task to download a Cost Usage Report.
+    Task to download a Report.
 
     Note that report_name will be not optional once Koku can specify
-    what report we should downlad.
+    what report we should download.
 
     Args:
         customer_name     (String): Name of the customer owning the cost usage report.
@@ -79,41 +57,24 @@ def _get_report_files(customer_name,
                          '/var/tmp/masu/base/aws/professor-hour-industry-television.csv']
 
     """
-    stmt = ('Downloading report for'
-            ' credential: {},'
-            ' source: {},'
-            ' customer_name: {},'
-            ' provider: {}')
-    log_statement = stmt.format(access_credential,
+    reports = _get_report_files(customer_name,
+                                access_credential,
                                 report_source,
-                                customer_name,
-                                provider_type)
-    LOG.info(log_statement)
+                                provider_type,
+                                report_name)
 
-    reports = []
-    try:
-        downloader = ReportDownloader(customer_name=customer_name,
-                                      access_credential=access_credential,
-                                      report_source=report_source,
-                                      provider_type=provider_type,
-                                      report_name=report_name)
-        return downloader.get_current_report()
-    except (MasuProcessingError, MasuProviderError, ReportDownloaderError) as err:
-        LOG.error(str(err))
-        return []
-
-    return reports
+    # initiate chained async task
+    for report_dict in reports:
+        request = {'schema_name': schema_name,
+                   'report_path': report_dict.get('file'),
+                   'compression': report_dict.get('compression')}
+        process_report_file.delay(**request)
 
 
 @shared_task(name='masu.processor.tasks.process_report_file', queue_name='process')
 def process_report_file(schema_name, report_path, compression):
-    """Shared celery task to process report files asynchronously."""
-    _process_report_file(schema_name, report_path, compression)
-
-
-def _process_report_file(schema_name, report_path, compression):
     """
-    Task to process a Cost Usage Report.
+    Task to process a Report.
 
     Args:
         schema_name (String) db schema name
@@ -124,29 +85,7 @@ def _process_report_file(schema_name, report_path, compression):
         None
 
     """
-    stmt = ('Processing Report:'
-            ' schema_name: {},'
-            ' report_path: {},'
-            ' compression: {}')
-    log_statement = stmt.format(schema_name,
-                                report_path,
-                                compression)
-    LOG.info(log_statement)
-
-    file_name = report_path.split('/')[-1]
-    stats_recorder = ReportStatsDBAccessor(file_name)
-    cursor_position = stats_recorder.get_cursor_position()
-
-    processor = ReportProcessor(schema_name=schema_name,
-                                report_path=report_path,
-                                compression=compression,
-                                cursor_pos=cursor_position)
-
-    stats_recorder.log_last_started_datetime()
-    last_cursor_position = processor.process()
-    stats_recorder.log_last_completed_datetime()
-    stats_recorder.set_cursor_position(last_cursor_position)
-    stats_recorder.commit()
+    _process_report_file(schema_name, report_path, compression)
 
 
 @shared_task(name='masu.processor.tasks.check_report_updates', queue_name='celery')

@@ -24,7 +24,8 @@ import faker
 from unittest.mock import patch, Mock
 
 from masu.external.report_downloader import ReportDownloaderError
-from masu.processor.tasks import _get_report_files, _process_report_file
+from masu.processor._tasks.download import _get_report_files
+from masu.processor._tasks.process import _process_report_file
 
 from tests import MasuTestCase
 
@@ -48,7 +49,7 @@ class GetReportFileTests(MasuTestCase):
 
     fake = faker.Faker()
 
-    @patch('masu.processor.tasks.ReportDownloader._set_downloader',
+    @patch('masu.processor._tasks.download.ReportDownloader._set_downloader',
            return_value=FakeDownloader)
     def test_get_report(self, fake_downloader):
         """Test task"""
@@ -63,7 +64,7 @@ class GetReportFileTests(MasuTestCase):
         self.assertIsInstance(report, list)
         self.assertGreater(len(report), 0)
 
-    @patch('masu.processor.tasks.ReportDownloader._set_downloader',
+    @patch('masu.processor._tasks.download.ReportDownloader._set_downloader',
            side_effect=Exception('only a test'))
     def test_get_report_exception(self, fake_downloader):
         """Test task"""
