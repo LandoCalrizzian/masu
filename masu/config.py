@@ -72,4 +72,5 @@ class Config(object):
     SCHEDULE_REPORT_CHECKS = os.getenv('SCHEDULE_REPORT_CHECKS', True)
 
     # The interval to scan for new reports.
-    REPORT_CHECK_INTERVAL = datetime.timedelta(minutes=60)
+    REPORT_CHECK_INTERVAL = datetime.timedelta(
+        minutes=int(os.getenv('SCHEDULE_CHECK_INTERVAL', 60)))
