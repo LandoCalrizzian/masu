@@ -87,10 +87,10 @@ class GetReportFileTests(MasuTestCase):
         account = fake_arn(service='iam', generate_account_id=True)
 
         reports = _get_report_files(customer_name=self.fake.word(),
-                                   access_credential=account,
-                                   provider_type='AWS',
-                                   report_name=self.fake.word(),
-                                   report_source=self.fake.word())
+                                    access_credential=account,
+                                    provider_type='AWS',
+                                    report_name=self.fake.word(),
+                                    report_source=self.fake.word())
 
         schema_name = self.fake.word()
         for report_dict in reports:
@@ -106,7 +106,7 @@ class GetReportFileTests(MasuTestCase):
             )
 
     @patch('masu.processor._tasks.download._get_report_files',
-           return_value=['file1', 'file2'])
+           return_value=[])
     @patch('masu.processor.tasks.process_report_file')
     def test_second_task_not_called(self, mock_process_files, mock_get_files):
         mock_process_files.delay = Mock()
