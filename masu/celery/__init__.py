@@ -31,8 +31,7 @@ def create_celery(app):
     # Define queues used for report processing
     celery.conf.task_routes = {
         'masu.processor.tasks.get_report_files': {'queue': 'download'},
-        'masu.processor.tasks.process_report_file': {'queue': 'process'},
-        'masu.celery.tasks.check_report_updates': {'queue': 'download'}
+        'masu.processor.tasks.process_report_file': {'queue': 'process'}
     }
 
     # Celery Beat schedule

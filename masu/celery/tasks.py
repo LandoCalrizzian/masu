@@ -28,7 +28,7 @@ from masu.processor.orchestrator import Orchestrator
 LOG = get_task_logger(__name__)
 
 
-@shared_task(name='masu.celery.tasks.check_report_updates', queue_name='download')
+@shared_task(name='masu.celery.tasks.check_report_updates')
 def check_report_updates():
     """Scheduled task to initiate scanning process on a regular interval."""
 
