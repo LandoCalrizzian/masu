@@ -34,6 +34,8 @@ def create_celery(app):
         'masu.processor.tasks.process_report_file': {'queue': 'process'}
     }
 
+    celery.conf.imports = ('masu.processor.tasks', 'masu.celery.tasks')
+
     # Celery Beat schedule
     if app.config.get('SCHEDULE_REPORT_CHECKS'):
         celery.conf.beat_schedule = {
