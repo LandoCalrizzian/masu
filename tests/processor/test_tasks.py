@@ -28,6 +28,7 @@ from masu.processor._tasks.download import _get_report_files
 from masu.processor._tasks.process import _process_report_file
 
 from tests import MasuTestCase
+from tests.external.downloader.aws import fake_arn
 
 
 class FakeDownloader(Mock):
@@ -53,10 +54,9 @@ class GetReportFileTests(MasuTestCase):
            return_value=FakeDownloader)
     def test_get_report(self, fake_downloader):
         """Test task"""
-        account = ''.join(random.choice(string.digits) for _ in range(12))
+        account = fake_arn(service='iam', generate_account_id=True)
         report = _get_report_files(customer_name=self.fake.word(),
-                                   access_credential='arn:aws:iam::{}:role/{}'.format(account,
-                                                                                      self.fake.word()),
+                                   access_credential=account,
                                    provider_type='AWS',
                                    report_name=self.fake.word(),
                                    report_source=self.fake.word())
@@ -68,17 +68,63 @@ class GetReportFileTests(MasuTestCase):
            side_effect=Exception('only a test'))
     def test_get_report_exception(self, fake_downloader):
         """Test task"""
-        account = ''.join(random.choice(string.digits) for _ in range(12))
+        account = fake_arn(service='iam', generate_account_id=True)
 
         report = _get_report_files(customer_name=self.fake.word(),
-                                   access_credential='arn:aws:iam::{}:role/{}'.format(account,
-                                                                                       self.fake.word()),
+                                   access_credential=account,
                                    provider_type='AWS',
                                    report_name=self.fake.word(),
                                    report_source=self.fake.word())
 
         self.assertEqual(report, [])
 
+    @patch('masu.processor._tasks.download._get_report_files',
+           return_value=['file1', 'file2'])
+    @patch('masu.processor.tasks.process_report_file')
+    def test_second_task_called(self, mock_process_files, mock_get_files):
+        mock_process_files.delay = Mock()
+
+        account = fake_arn(service='iam', generate_account_id=True)
+
+        reports = _get_report_files(customer_name=self.fake.word(),
+                                   access_credential=account,
+                                   provider_type='AWS',
+                                   report_name=self.fake.word(),
+                                   report_source=self.fake.word())
+
+        schema_name = self.fake.word()
+        for report_dict in reports:
+            request = {'schema_name': schema_name,
+                       'report_path': report_dict.get('file'),
+                       'compression': report_dict.get('compression')}
+            process_report_file.delay(**request)
+
+            mock_process_files.assert_called_with(
+                schema_name,
+                report_dict.get('file'),
+                report_dict.get('compression')
+            )
+
+    @patch('masu.processor._tasks.download._get_report_files',
+           return_value=['file1', 'file2'])
+    @patch('masu.processor.tasks.process_report_file')
+    def test_second_task_not_called(self, mock_process_files, mock_get_files):
+        mock_process_files.delay = Mock()
+
+        account = fake_arn(service='iam', generate_account_id=True)
+
+        reports = _get_report_files(customer_name=self.fake.word(),
+                                   access_credential=account,
+                                   provider_type='AWS',
+                                   report_name=self.fake.word(),
+                                   report_source=self.fake.word())
+        for report_dict in reports:
+            request = {'schema_name': schema_name,
+                       'report_path': report_dict.get('file'),
+                       'compression': report_dict.get('compression')}
+            process_report_file.delay(**request)
+
+        mock_process_files.assert_not_called()
 
 class ProcessReportFileTests(MasuTestCase):
     """Test Cases for the Orchestrator object."""
