@@ -60,7 +60,6 @@ def _get_report_files(customer_name,
                                 provider_type)
     LOG.info(log_statement)
 
-    reports = []
     try:
         downloader = ReportDownloader(customer_name=customer_name,
                                       access_credential=access_credential,
@@ -71,5 +70,3 @@ def _get_report_files(customer_name,
     except (MasuProcessingError, MasuProviderError, ReportDownloaderError) as err:
         LOG.error(str(err))
         return []
-
-    return reports

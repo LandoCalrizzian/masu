@@ -23,7 +23,6 @@
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
-from masu.external.accounts_accessor import AccountsAccessor
 from masu.processor._tasks.download import _get_report_files
 from masu.processor._tasks.process import _process_report_file
 
@@ -35,7 +34,7 @@ def get_report_files(customer_name,
                      access_credential,
                      report_source,
                      provider_type,
-                     schema_name=None,
+                     schema_name,
                      report_name=None):
     """
     Task to download a Report.
@@ -86,19 +85,3 @@ def process_report_file(schema_name, report_path, compression):
 
     """
     _process_report_file(schema_name, report_path, compression)
-
-
-@shared_task(name='masu.processor.tasks.check_report_updates', queue_name='celery')
-def check_report_updates():
-    """Scheduled task to initiate scanning process on a regular interval."""
-    reports = []
-    for account in AccountsAccessor().get_accounts():
-        stmt = 'Download task queued for {}'.format(account.get_customer())
-        LOG.info(stmt)
-
-        reports = get_report_files.delay(customer_name=account.get_customer(),
-                                         access_credential=account.get_access_credential(),
-                                         report_source=account.get_billing_source(),
-                                         provider_type=account.get_provider_type(),
-                                         schema_name=account.get_schema_name())
-    return reports

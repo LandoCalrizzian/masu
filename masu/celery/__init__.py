@@ -32,14 +32,14 @@ def create_celery(app):
     celery.conf.task_routes = {
         'masu.processor.tasks.get_report_files': {'queue': 'download'},
         'masu.processor.tasks.process_report_file': {'queue': 'process'},
-        'masu.processor.tasks.check_report_updates': {'queue': 'celery'}
+        'masu.celery.tasks.check_report_updates': {'queue': 'download'}
     }
 
     # Celery Beat schedule
     if app.config.get('SCHEDULE_REPORT_CHECKS'):
         celery.conf.beat_schedule = {
             'check-report-updates': {
-                'task': 'masu.processor.tasks.check_report_updates',
+                'task': 'masu.celery.tasks.check_report_updates',
                 'schedule': app.config.get('REPORT_CHECK_INTERVAL'),
                 'args': []
             }
