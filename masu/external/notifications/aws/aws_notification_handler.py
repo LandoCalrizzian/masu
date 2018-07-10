@@ -26,6 +26,9 @@ from masu.external import (AWS_REGIONS, AWS_SNS_HEADER_MSG_TYPE, AWS_SNS_HEADER_
 from masu.external.notifications.notification_interface import (NotificationInterface,
                                                                 NotificationInterfaceFilter)
 
+# the cn endpoints aren't supported by moto, so filter them out
+AWS_REGIONS = list(filter(lambda reg: not reg.startswith('cn-'), AWS_REGIONS))
+
 LOG = logging.getLogger(__name__)
 
 
