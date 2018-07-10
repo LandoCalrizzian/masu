@@ -68,7 +68,8 @@ def create_app(test_config=None):
     db = SQLAlchemy(app)  # noqa: F841
 
     # Celery task queue
-    celery = create_celery(app)
+    # pylint: disable=unused-variable
+    celery = create_celery(app)   # noqa: F841
 
     # Routes
     app.add_url_rule('/api/v1/status/', view_func=StatusView.as_view('show_status'))
