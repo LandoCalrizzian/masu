@@ -32,26 +32,7 @@ def _get_report_files(customer_name,
                       provider_type,
                       provider_id,
                       report_name=None):
-    """
-    Task to download a Report.
-
-    Note that report_name will be not optional once Koku can specify
-    what report we should download.
-
-    Args:
-        customer_name     (String): Name of the customer owning the cost usage report.
-        access_credential (String): Credential needed to access cost usage report
-                                    in the backend provider.
-        report_source     (String): Location of the cost usage report in the backend provider.
-        provider_type     (String): Koku defined provider type string.  Example: Amazon = 'AWS'
-        report_name       (String): Name of the cost usage report to download.
-
-    Returns:
-        files (List) List of filenames with full local path.
-               Example: ['/var/tmp/masu/region/aws/catch-clearly.csv',
-                         '/var/tmp/masu/base/aws/professor-hour-industry-television.csv']
-
-    """
+    """Task to download a Report."""
     stmt = ('Downloading report for'
             ' credential: {},'
             ' source: {},'
