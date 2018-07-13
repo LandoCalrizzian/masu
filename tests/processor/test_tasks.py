@@ -130,7 +130,7 @@ class TestProcessorTasks(MasuTestCase):
                                     'provider_id': random.randint(1,65535)}
 
         self.today = datetime.today()
-        self.yesterday = datetime.today() - timedelta(days=-1)
+        self.yesterday = datetime.today() - timedelta(days=1)
 
     @patch('masu.processor.tasks._get_report_files')
     @patch('masu.processor.tasks.process_report_file')
@@ -165,7 +165,7 @@ class TestProcessorTasks(MasuTestCase):
 
     @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_completed_datetime')
     @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_started_datetime')
-    @patch('masu.processor._tasks.download._get_report_files')
+    @patch('masu.processor.tasks._get_report_files')
     @patch('masu.processor.tasks.process_report_file')
     def test_get_report_files_timestamps_aligned(self,
                                                  mock_process_files,
@@ -187,7 +187,7 @@ class TestProcessorTasks(MasuTestCase):
 
     @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_completed_datetime')
     @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_started_datetime')
-    @patch('masu.processor._tasks.download._get_report_files')
+    @patch('masu.processor.tasks._get_report_files')
     @patch('masu.processor.tasks.process_report_file')
     def test_get_report_files_timestamps_misaligned(self,
                                                     mock_process_files,

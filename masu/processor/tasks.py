@@ -80,13 +80,12 @@ def get_report_files(customer_name,
                        'report_path': report_dict.get('file'),
                        'compression': report_dict.get('compression')}
             result = process_report_file.delay(**request)
-            LOG.error('Processing task queued - File: %s, Task ID: %s',
+            LOG.info('Processing task queued - File: %s, Task ID: %s',
                      report_dict.get('file'),
                      str(result))
         else:
-            LOG.error('Processing task NOT queued. Start time is later than end time! Detail: %s',
+            LOG.info('Processing task NOT queued. Start time is later than end time! Detail: %s',
                      str(report_dict))
-            LOG.error('%s < %s', last_start, last_end)
 
 
 @shared_task(name='masu.processor.tasks.process_report_file', queue_name='process')
