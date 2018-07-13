@@ -22,7 +22,7 @@ import string
 from datetime import datetime, timedelta
 
 import faker
-from unittest.mock import call, patch, Mock, DEFAULT
+from unittest.mock import call, patch, Mock
 
 from masu.database.report_stats_db_accessor import ReportStatsDBAccessor
 from masu.external.report_downloader import ReportDownloaderError
@@ -206,6 +206,37 @@ class TestProcessorTasks(MasuTestCase):
 
         get_report_files(**self.fake_get_report_args)
         mock_process_files.delay.assert_not_called()
+
+    @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_completed_datetime')
+    @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_started_datetime')
+    @patch('masu.processor.tasks._get_report_files')
+    @patch('masu.processor.tasks.process_report_file')
+    def test_get_report_files_timestamps_empty(self,
+                                               mock_process_files,
+                                               mock_get_files,
+                                               mock_started,
+                                               mock_completed):
+        """
+        Test that the chained task is called when start timestamp is before
+        end timestamp.
+        """
+        mock_process_files.delay = Mock()
+        mock_get_files.return_value = self.fake_reports
+
+        mock_started.return_value = None
+        mock_completed.return_value = self.today
+        get_report_files(**self.fake_get_report_args)
+        mock_process_files.delay.assert_called()
+
+        mock_started.return_value = self.today
+        mock_completed.return_value = None
+        get_report_files(**self.fake_get_report_args)
+        mock_process_files.delay.assert_called()
+
+        mock_started.return_value = None
+        mock_completed.return_value = None
+        get_report_files(**self.fake_get_report_args)
+        mock_process_files.delay.assert_called()
 
     @patch('masu.processor.tasks._process_report_file')
     def test_process_report_file(self, mock_process_files):

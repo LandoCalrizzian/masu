@@ -75,7 +75,7 @@ def get_report_files(customer_name,
         last_end = stats.get_last_completed_datetime()
 
         # only queue up a processing job if there's none currently in-progress.
-        if (last_start and last_end) and (last_start < last_end):
+        if not last_start or not last_end or last_start < last_end:
             request = {'schema_name': schema_name,
                        'report_path': report_dict.get('file'),
                        'compression': report_dict.get('compression')}
