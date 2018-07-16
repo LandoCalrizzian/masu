@@ -208,7 +208,7 @@ class TestProcessorTasks(MasuTestCase):
     @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_started_datetime')
     @patch('masu.processor.tasks._get_report_files')
     @patch('masu.processor.tasks.process_report_file')
-    def test_get_report_files_timestamps_empty(self,
+    def test_get_report_files_timestamps_empty_start(self,
                                                mock_process_files,
                                                mock_get_files,
                                                mock_started,
@@ -228,7 +228,7 @@ class TestProcessorTasks(MasuTestCase):
     @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_started_datetime')
     @patch('masu.processor.tasks._get_report_files')
     @patch('masu.processor.tasks.process_report_file')
-    def test_get_report_files_timestamps_empty(self,
+    def test_get_report_files_timestamps_empty_end(self,
                                                mock_process_files,
                                                mock_get_files,
                                                mock_started,
@@ -245,7 +245,7 @@ class TestProcessorTasks(MasuTestCase):
     @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_started_datetime')
     @patch('masu.processor.tasks._get_report_files')
     @patch('masu.processor.tasks.process_report_file')
-    def test_get_report_files_timestamps_empty(self,
+    def test_get_report_files_timestamps_empty_both(self,
                                                mock_process_files,
                                                mock_get_files,
                                                mock_started,
@@ -257,26 +257,6 @@ class TestProcessorTasks(MasuTestCase):
         mock_completed.return_value = None
         get_report_files(**self.fake_get_report_args)
         mock_process_files.delay.assert_called()
-
-    @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_completed_datetime')
-    @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_started_datetime')
-    @patch('masu.processor.tasks._get_report_files')
-    @patch('masu.processor.tasks.process_report_file')
-    def test_get_report_files_timestamps_empty(self,
-                                               mock_process_files,
-                                               mock_get_files,
-                                               mock_started,
-                                               mock_completed):
-        """
-        Test that the chained task is not called when there is a completed
-        date, but no start date.
-        """
-        # this should never happen. if this test breaks, you've really screwed
-        # something up.
-        mock_started.return_value = None
-        mock_completed.return_value = self.today
-        get_report_files(**self.fake_get_report_args)
-        mock_process_files.delay.assert_not_called()
 
     @patch('masu.processor.tasks._process_report_file')
     def test_process_report_file(self, mock_process_files):
