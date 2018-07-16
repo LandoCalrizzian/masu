@@ -37,7 +37,6 @@ def get_report_files(customer_name,
                      billing_source,
                      provider_type,
                      schema_name,
-                     provider_id,
                      report_name=None):
     """
     Task to download a Report.
@@ -52,7 +51,6 @@ def get_report_files(customer_name,
         billing_source    (String): Location of the cost usage report in the backend provider.
         provider_type     (String): Koku defined provider type string.  Example: Amazon = 'AWS'
         schema_name       (String): Name of the DB schema
-        provider_id       (Int):    Reference id of the provider
         report_name       (String): Name of the cost usage report to download.
 
     Returns:
@@ -65,12 +63,11 @@ def get_report_files(customer_name,
                                 authentication,
                                 billing_source,
                                 provider_type,
-                                provider_id,
                                 report_name)
 
     # initiate chained async task
     for report_dict in reports:
-        stats = ReportStatsDBAccessor(report_dict.get('file'), provider_id)
+        stats = ReportStatsDBAccessor(report_dict.get('file'))
         last_start = stats.get_last_started_datetime()
         last_end = stats.get_last_completed_datetime()
 

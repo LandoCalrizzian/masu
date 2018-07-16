@@ -62,8 +62,7 @@ class GetReportFileTests(MasuTestCase):
                                    authentication=account,
                                    provider_type='AWS',
                                    report_name=self.fake.word(),
-                                   billing_source=self.fake.word(),
-                                   provider_id=random.randint(1,65535))
+                                   billing_source=self.fake.word())
 
         self.assertIsInstance(report, list)
         self.assertGreater(len(report), 0)
@@ -78,8 +77,7 @@ class GetReportFileTests(MasuTestCase):
                                    authentication=account,
                                    provider_type='AWS',
                                    report_name=self.fake.word(),
-                                   billing_source=self.fake.word(),
-                                   provider_id=random.randint(1,65535))
+                                   billing_source=self.fake.word())
 
         self.assertEqual(report, [])
 
@@ -122,12 +120,11 @@ class TestProcessorTasks(MasuTestCase):
         fake_account = fake_arn(service='iam', generate_account_id=True)
 
         self.fake_get_report_args = {'customer_name': self.fake.word(),
-                                    'authentication': fake_account,
-                                    'provider_type': 'AWS',
-                                    'report_name': self.fake.word(),
-                                    'schema_name': self.fake.word(),
-                                    'billing_source': self.fake.word(),
-                                    'provider_id': random.randint(1,65535)}
+                                     'authentication': fake_account,
+                                     'provider_type': 'AWS',
+                                     'report_name': self.fake.word(),
+                                     'schema_name': self.fake.word(),
+                                     'billing_source': self.fake.word()}
 
         self.today = datetime.today()
         self.yesterday = datetime.today() - timedelta(days=1)
@@ -217,8 +214,7 @@ class TestProcessorTasks(MasuTestCase):
                                                mock_started,
                                                mock_completed):
         """
-        Test that the chained task is called when start timestamp is before
-        end timestamp.
+        Test that the chained task is called when no start time is set.
         """
         mock_process_files.delay = Mock()
         mock_get_files.return_value = self.fake_reports
@@ -228,15 +224,59 @@ class TestProcessorTasks(MasuTestCase):
         get_report_files(**self.fake_get_report_args)
         mock_process_files.delay.assert_called()
 
+    @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_completed_datetime')
+    @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_started_datetime')
+    @patch('masu.processor.tasks._get_report_files')
+    @patch('masu.processor.tasks.process_report_file')
+    def test_get_report_files_timestamps_empty(self,
+                                               mock_process_files,
+                                               mock_get_files,
+                                               mock_started,
+                                               mock_completed):
+        """
+        Test that the chained task is called when no end time is set.
+        """
         mock_started.return_value = self.today
         mock_completed.return_value = None
         get_report_files(**self.fake_get_report_args)
         mock_process_files.delay.assert_called()
 
+    @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_completed_datetime')
+    @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_started_datetime')
+    @patch('masu.processor.tasks._get_report_files')
+    @patch('masu.processor.tasks.process_report_file')
+    def test_get_report_files_timestamps_empty(self,
+                                               mock_process_files,
+                                               mock_get_files,
+                                               mock_started,
+                                               mock_completed):
+        """
+        Test that the chained task is called when no timestamps are set.
+        """
         mock_started.return_value = None
         mock_completed.return_value = None
         get_report_files(**self.fake_get_report_args)
         mock_process_files.delay.assert_called()
+
+    @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_completed_datetime')
+    @patch('masu.processor.tasks.ReportStatsDBAccessor.get_last_started_datetime')
+    @patch('masu.processor.tasks._get_report_files')
+    @patch('masu.processor.tasks.process_report_file')
+    def test_get_report_files_timestamps_empty(self,
+                                               mock_process_files,
+                                               mock_get_files,
+                                               mock_started,
+                                               mock_completed):
+        """
+        Test that the chained task is not called when there is a completed
+        date, but no start date.
+        """
+        # this should never happen. if this test breaks, you've really screwed
+        # something up.
+        mock_started.return_value = None
+        mock_completed.return_value = self.today
+        get_report_files(**self.fake_get_report_args)
+        mock_process_files.delay.assert_not_called()
 
     @patch('masu.processor.tasks._process_report_file')
     def test_process_report_file(self, mock_process_files):

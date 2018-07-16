@@ -216,7 +216,7 @@ class AWSReportDownloader(ReportDownloaderBase, DownloaderInterface):
         report_dictionary = {}
         for report in reports:
             s3_filename = report.split('/')[-1]
-            stats_recorder = ReportStatsDBAccessor(s3_filename, self.provider_id)
+            stats_recorder = ReportStatsDBAccessor(s3_filename)
             stored_etag = stats_recorder.get_etag()
 
             file_name, etag = self.download_file(report, stored_etag)

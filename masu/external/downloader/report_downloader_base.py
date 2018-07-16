@@ -26,13 +26,14 @@ class ReportDownloaderBase():
     Base object class for downloading cost reports from a cloud provider.
     """
 
-    def __init__(self, download_path=None, provider_id=None):
+    def __init__(self, download_path=None):
         """
         Create a downloader.
 
         Args:
             download_path (String) filesystem path to store downloaded files
-            provider_id (Int) reference ID of provider in Koku database
         """
-        self.download_path = download_path if download_path else mkdtemp(prefix='masu')
-        self.provider_id = provider_id if provider_id else None
+        if download_path:
+            self.download_path = download_path
+        else:
+            self.download_path = mkdtemp(prefix='masu')
