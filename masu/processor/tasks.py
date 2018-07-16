@@ -85,7 +85,7 @@ def get_report_files(customer_name,
                      str(report_dict))
 
 
-@shared_task(name='masu.processor.tasks.process_report_file', queue_name='process')
+@celery.task(name='masu.processor.tasks.process_report_file', queue_name='process')
 def process_report_file(schema_name, report_path, compression):
     """
     Task to process a Report.
