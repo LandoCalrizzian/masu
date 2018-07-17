@@ -33,7 +33,6 @@ from masu.processor.tasks import get_report_files, process_report_file
 from tests import MasuTestCase
 from tests.external.downloader.aws import fake_arn
 
-
 class FakeDownloader(Mock):
     def download_current_report():
         fake = faker.Faker()
@@ -236,6 +235,9 @@ class TestProcessorTasks(MasuTestCase):
         """
         Test that the chained task is called when no end time is set.
         """
+        mock_process_files.delay = Mock()
+        mock_get_files.return_value = self.fake_reports
+
         mock_started.return_value = self.today
         mock_completed.return_value = None
         get_report_files(**self.fake_get_report_args)
@@ -253,6 +255,9 @@ class TestProcessorTasks(MasuTestCase):
         """
         Test that the chained task is called when no timestamps are set.
         """
+        mock_process_files.delay = Mock()
+        mock_get_files.return_value = self.fake_reports
+
         mock_started.return_value = None
         mock_completed.return_value = None
         get_report_files(**self.fake_get_report_args)
