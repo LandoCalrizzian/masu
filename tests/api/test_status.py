@@ -17,6 +17,8 @@
 
 """Test the status endpoint view."""
 
+import logging
+
 from collections import namedtuple
 from datetime import datetime
 from unittest.mock import ANY, Mock, patch, PropertyMock
@@ -26,10 +28,15 @@ from masu.api.status import ApplicationStatus
 from tests import MasuTestCase
 
 
+@patch('masu.api.status.status.run', return_value={})
 class StatusAPITest(MasuTestCase):
     """Test Cases for the Status API."""
 
-    def test_status(self):
+    def setUp(self):
+        super().setUp()
+        logging.disable(logging.NOTSET)
+
+    def test_status(self, mock_celery):
         """Test the status endpoint."""
         response = self.client.get('/api/v1/status/')
         body = response.json
@@ -37,21 +44,25 @@ class StatusAPITest(MasuTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers['Content-Type'], 'application/json')
 
+        self.assertIn('celery_status', body)
         self.assertIn('commit', body)
         self.assertIn('python_version', body)
         self.assertIn('platform_info', body)
         self.assertIn('modules', body)
         self.assertIn('api_version', body)
+
+        self.assertIsNotNone(body['celery_status'])
         self.assertIsNotNone(body['commit'])
         self.assertIsNotNone(body['python_version'])
         self.assertIsNotNone(body['platform_info'])
         self.assertIsNotNone(body['modules'])
+
         self.assertEqual(body['api_version'], API_VERSION)
         self.assertIsNotNone(body['current_datetime'])
         self.assertIsNotNone(body['debug'])
 
     @patch('masu.api.status.os.environ')
-    def test_commit_with_env(self, mock_os):
+    def test_commit_with_env(self, mock_os, mock_celery):
         """Test the commit method via environment."""
         expected = 'buildnum'
         mock_os.get.return_value = expected
@@ -60,7 +71,7 @@ class StatusAPITest(MasuTestCase):
 
     @patch('masu.api.status.subprocess.run')
     @patch('masu.api.status.os.environ')
-    def test_commit_with_subprocess(self, mock_os, mock_subprocess):
+    def test_commit_with_subprocess(self, mock_os, mock_subprocess, mock_celery):
         """Test the commit method via subprocess."""
         expected = 'buildnum'
         run = Mock()
@@ -71,7 +82,7 @@ class StatusAPITest(MasuTestCase):
         self.assertEqual(result, expected)
 
     @patch('masu.api.status.platform.uname')
-    def test_platform_info(self, mock_platform):
+    def test_platform_info(self, mock_platform, mock_celery):
         """Test the platform_info method."""
         platform_record = namedtuple('Platform', ['os', 'version'])
         a_plat = platform_record('Red Hat', '7.4')
@@ -81,7 +92,7 @@ class StatusAPITest(MasuTestCase):
         self.assertEqual(result['version'], '7.4')
 
     @patch('masu.api.status.sys.version')
-    def test_python_version(self, mock_sys_ver):
+    def test_python_version(self, mock_sys_ver, mock_celery):
         """Test the python_version method."""
         expected = 'Python 3.6'
         mock_sys_ver.replace.return_value = expected
@@ -89,7 +100,7 @@ class StatusAPITest(MasuTestCase):
         self.assertEqual(result, expected)
 
     @patch('masu.api.status.sys.modules')
-    def test_modules(self, mock_modules):
+    def test_modules(self, mock_modules, mock_celery):
         """Test the modules method."""
         expected = {'module1': 'version1',
                     'module2': 'version2'}
@@ -100,14 +111,14 @@ class StatusAPITest(MasuTestCase):
         result = ApplicationStatus().modules
         self.assertEqual(result, expected)
 
-    @patch('masu.api.status.logger.info')
-    def test_startup_with_modules(self, mock_logger):
+    @patch('masu.api.status.LOG.info')
+    def test_startup_with_modules(self, mock_logger, mock_celery):
         """Test the startup method with a module list."""
         ApplicationStatus().startup()
         mock_logger.assert_called_with(ANY, ANY)
 
     @patch('masu.api.status.ApplicationStatus.modules', new_callable=PropertyMock)
-    def test_startup_without_modules(self, mock_mods):
+    def test_startup_without_modules(self, mock_mods, mock_celery):
         """Test the startup method without a module list."""
         mock_mods.return_value = {}
         expected = 'INFO:masu.api.status:Modules: None'
@@ -117,7 +128,7 @@ class StatusAPITest(MasuTestCase):
             self.assertIn(expected, logger.output)
 
     @patch('masu.external.date_accessor.DateAccessor.today')
-    def test_get_datetime(self, mock_date):
+    def test_get_datetime(self, mock_date, mock_celery):
         """Test the startup method for datetime."""
         mock_date_string = '2018-07-25 10:41:59.993536'
         mock_date_obj = datetime.strptime(mock_date_string, '%Y-%m-%d %H:%M:%S.%f')
@@ -127,9 +138,36 @@ class StatusAPITest(MasuTestCase):
             ApplicationStatus().startup()
             self.assertIn(str(expected), logger.output)
 
-    def test_get_debug(self):
+    def test_get_debug(self, mock_celery):
         """Test the startup method for debug state."""
         expected = 'INFO:masu.api.status:DEBUG enabled: {}'.format(str(False))
         with self.assertLogs('masu.api.status', level='INFO') as logger:
             ApplicationStatus().startup()
             self.assertIn(str(expected), logger.output)
+
+    def test_celery_status_called(self, mock_celery):
+        """test celery status."""
+        ApplicationStatus().startup()
+        mock_celery.assert_called()
+
+    def test_celery_status_no_output(self, mock_celery):
+        """test celery status."""
+        mock_celery.return_value = None
+
+        output = ApplicationStatus().celery_status
+        self.assertIn('ERROR', output.keys())
+
+    def test_celery_status_ioerror(self, mock_celery):
+        """test celery status."""
+        mock_celery.side_effect = IOError
+
+        output = ApplicationStatus().celery_status
+        self.assertIn('ERROR', output.keys())
+
+    def test_celery_status_importerror(self, mock_celery):
+        """test celery status."""
+        mock_celery.side_effect = ImportError
+
+        output = ApplicationStatus().celery_status
+        self.assertIn('ERROR', output.keys())
+

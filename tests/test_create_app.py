@@ -18,7 +18,7 @@
 """Test the app factory for Masu."""
 
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 
 from masu import create_app
 
@@ -26,7 +26,9 @@ from masu import create_app
 class CreateAppTest(TestCase):
     """Test Cases for create_app app factory."""
 
-    def test_create_app(self):
+    @patch('masu.api.status.ApplicationStatus.celery_status',
+           new_callable=PropertyMock)
+    def test_create_app(self, mock_status):
         """Assert testing is false without passing test config."""
         self.assertFalse(create_app().testing)
 
