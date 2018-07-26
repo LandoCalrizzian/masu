@@ -25,7 +25,7 @@ import subprocess
 import sys
 from errno import errorcode
 
-from flask import jsonify
+from flask import jsonify, request
 
 from masu.api import API_VERSION
 from masu.celery import celery
@@ -41,6 +41,9 @@ API_V1_ROUTES = {}
 @application_route('/status/', API_V1_ROUTES, methods=('GET',))
 def get_status():
     """Packages response for class-based view."""
+    if 'liveness' in request.args:
+        return jsonify({'alive': True})
+
     app_status = ApplicationStatus()
     response = {
         'celery_status': app_status.celery_status,
@@ -72,7 +75,7 @@ class ApplicationStatus():
 
         def announce_worker_event(event):
             state.event(event)
-            LOG.info(f'EVENT: {event}')
+            LOG.debug(f'EVENT: {event}')
             events[event.pop('hostname')] = event
 
         with celery.connection() as connection:
@@ -85,8 +88,10 @@ class ApplicationStatus():
                 recv.capture(limit=5, timeout=5, wakeup=True)
             except socket.timeout:
                 LOG.warning('Timeout connecting to message broker.')
+                return {'ERROR': 'connection timeout'}
             except ConnectionResetError:
                 LOG.warning('Connection reset by message broker.')
+                return {'ERROR': 'connection reset'}
 
             if len(events) > 5:
                 # Receiver will run indefinitely unless we tell it to stop.
