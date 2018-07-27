@@ -18,17 +18,19 @@
 """Test the status endpoint view."""
 
 import logging
+import socket
 
 from collections import namedtuple
 from datetime import datetime
 from unittest.mock import ANY, Mock, patch, PropertyMock
 
+from masu import create_app
 from masu.api import API_VERSION
-from masu.api.status import ApplicationStatus
+from masu.api.status import ApplicationStatus, get_status
 from tests import MasuTestCase
 
 
-@patch('masu.api.status.status.run', return_value={})
+@patch('masu.api.status.celery_app', autospec=True)
 class StatusAPITest(MasuTestCase):
     """Test Cases for the Status API."""
 
@@ -145,29 +147,46 @@ class StatusAPITest(MasuTestCase):
             ApplicationStatus().startup()
             self.assertIn(str(expected), logger.output)
 
-    def test_celery_status_called(self, mock_celery):
-        """test celery status."""
-        ApplicationStatus().startup()
-        mock_celery.assert_called()
+    def test_startup_has_celery_status(self, mock_celery):
+        """test celery status is in startup() output."""
+        expected = 'INFO:masu.api.status:Celery Status: {}'
 
-    def test_celery_status_no_output(self, mock_celery):
-        """test celery status."""
-        mock_celery.return_value = None
+        with self.assertLogs('masu.api.status', level='INFO') as logger:
+            ApplicationStatus().startup()
+            self.assertIn(expected, logger.output)
 
-        output = ApplicationStatus().celery_status
-        self.assertIn('ERROR', output.keys())
+    def test_celery_status_timeout(self, mock_celery):
+        """test celery status handles timeout."""
+        mock_celery.events.Receiver.return_value.capture.side_effect = socket.timeout
 
-    def test_celery_status_ioerror(self, mock_celery):
-        """test celery status."""
-        mock_celery.side_effect = IOError
+        expected = {'ERROR': 'connection timeout'}
+        expected_log = 'WARNING:masu.api.status:Timeout connecting to message broker.'
 
-        output = ApplicationStatus().celery_status
-        self.assertIn('ERROR', output.keys())
+        with self.assertLogs('masu.api.status', level='WARNING') as logger:
+            status = ApplicationStatus().celery_status
+            self.assertEqual(status, expected)
+            self.assertIn(expected_log, logger.output)
 
-    def test_celery_status_importerror(self, mock_celery):
-        """test celery status."""
-        mock_celery.side_effect = ImportError
+    def test_celery_status_reset(self, mock_celery):
+        """test celery status handles ConnectionResetError."""
+        mock_celery.events.Receiver.return_value.capture.side_effect = ConnectionResetError
 
-        output = ApplicationStatus().celery_status
-        self.assertIn('ERROR', output.keys())
+        expected = {'ERROR': 'connection reset'}
+        expected_log = 'WARNING:masu.api.status:Connection reset by message broker.'
 
+        with self.assertLogs('masu.api.status', level='WARNING') as logger:
+            status = ApplicationStatus().celery_status
+            self.assertEqual(status, expected)
+            self.assertIn(expected_log, logger.output)
+
+
+    def test_liveness(self, mock_celery):
+        """Test the liveness response."""
+        expected = {'alive': True}
+        app = create_app(test_config=dict())
+
+        with app.test_request_context('/?liveness'):
+            response = get_status()
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json, expected)

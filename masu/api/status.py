@@ -23,12 +23,11 @@ import platform
 import socket
 import subprocess
 import sys
-from errno import errorcode
 
 from flask import jsonify, request
 
 from masu.api import API_VERSION
-from masu.celery import celery
+from masu.celery import celery as celery_app
 from masu.config import Config
 from masu.external.date_accessor import DateAccessor
 from masu.util.blueprint import application_route
@@ -70,19 +69,20 @@ class ApplicationStatus():
 
         :returns: dict of celery status
         """
-        state = celery.events.State()
+        state = celery_app.events.State()
         events = {}
 
         def announce_worker_event(event):
+            """Announce worker events."""
             state.event(event)
             LOG.debug(f'EVENT: {event}')
             events[event.pop('hostname')] = event
 
-        with celery.connection() as connection:
-            recv = celery.events.Receiver(connection, handlers={
-                    'worker-offline': announce_worker_event,
-                    'worker-online': announce_worker_event,
-                    'worker-heartbeat': announce_worker_event,
+        with celery_app.connection() as connection:
+            recv = celery_app.events.Receiver(connection, handlers={
+                'worker-offline': announce_worker_event,
+                'worker-online': announce_worker_event,
+                'worker-heartbeat': announce_worker_event,
             })
             try:
                 recv.capture(limit=5, timeout=5, wakeup=True)
@@ -171,7 +171,7 @@ class ApplicationStatus():
 
         LOG.info('Platform:')
         for name, value in self.platform_info.items():
-            LOG.info('{name} - {value}')
+            LOG.info(f'{name} - {value}')
 
         LOG.info('Python: %s', self.python_version)
         module_list = []
