@@ -17,9 +17,13 @@
 
 """Test the app factory for Masu."""
 
+import errno
+import logging
+
 from unittest import TestCase
 from unittest.mock import patch, PropertyMock
 
+from flask import Flask
 from masu import create_app
 
 
@@ -43,3 +47,25 @@ class CreateAppTest(TestCase):
                 }
             ).testing
         )
+
+    @patch('masu.os.makedirs')
+    def test_create_app_dirs_exist(self, mock_mkdir):
+        """Test handling of os exception."""
+        err = OSError('test error', errno.EEXIST)
+        mock_mkdir.side_effect = err
+
+        app = create_app(test_config=dict())
+        self.assertIsInstance(app, Flask)
+
+    @patch('masu.os.makedirs')
+    def test_create_app_oserror(self, mock_mkdir):
+        """Test handling of os exception."""
+        logging.disable(logging.NOTSET)
+
+        err = OSError('test error')
+        mock_mkdir.side_effect = err
+
+        expected = 'WARNING:masu:test error'
+        with self.assertLogs('masu', level='WARNING') as logger:
+            app = create_app(test_config=dict())
+            self.assertIn(expected, logger.output)
